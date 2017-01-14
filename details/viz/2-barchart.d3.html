@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<script src="https://code.jquery.com/jquery-3.1.1.slim.min.js" integrity="sha256-/SIrNqv8h6QGKDuNoLGA4iret+kyesCkHGzVUUV0shc=" crossorigin="anonymous"></script>
+		<meta charset="utf-8">
+
+		<title>Top 100</title>
+	</head>
+	<body>
+		<h1>Top 100</h1>
+		<div id="header">
+			<div class="hname">
+				Name
+				<div class="arrow-up" onclick="sortTitle(1)"></div>
+				<div class="arrow-down" onclick="sortTitle(-1)"></div>
+			</div>
+
+			<div class="hyear">
+				Year
+				<div class="arrow-up" onclick="sortYear(1)"></div>
+				<div class="arrow-down" onclick="sortYear(-1)"></div>
+			</div>
+
+			<div class="hdirector">
+				Director
+				<div class="arrow-up" onclick="sortDirector(1)"></div>
+				<div class="arrow-down" onclick="sortDirector(-1)"></div>
+			</div>
+
+			<div class="hscore">
+				Score
+				<div class="arrow-up" onclick="sortScore(1)"></div>
+				<div class="arrow-down" onclick="sortScore(-1)"></div>
+			</div>
+			<div class="hvotes">
+				Votes
+				<div class="arrow-up" onclick="sortSelectedRanks(1)"></div>
+				<div class="arrow-down" onclick="sortSelectedRanks(-1)"></div>
+				<select id="selectrank" class="rankselect" multiple="multiple" size="10">
+				  <option value="0">Rank 1 votes</option>
+				  <option value="1">Rank 2 votes</option>
+				  <option value="2">Rank 3 votes</option>
+					<option value="3">Rank 4 votes</option>
+				  <option value="4">Rank 5 votes</option>
+				  <option value="5">Rank 6 votes</option>
+					<option value="6">Rank 7 votes</option>
+				  <option value="7">Rank 8 votes</option>
+				  <option value="8">Rank 9 votes</option>
+					<option value="9">Rank 10 votes</option>
+				</select>
+
+			</div>
+		</div>
+
+		<div id='top'></div>
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.4.1/d3.min.js"></script>
+		<script>
+		//window.onload = function(){
+			$('.metaheader').click(function(){
+			alert("Clicked");
+		})
+//	};
+
+var metadata = {};
+//The scale will be used to compute the width of the graph
+var x = d3.scaleLinear()
+    .domain([0, 20])
+    .range([2, 100]);
+
+d3.tsv("../data/metadata.tsv", function(error, data) {
+	if(error) throw error;
+	data.forEach(function(d) {
+		metadata[d.imdbID] = d;
+	});
+});
+
+var ol = d3.select("#top")
+//var rankColor = ['#001f3f','#0074D9','#7FDBFF','#39CCCC','#3D9970','#2ECC40','#01FF70','#FFDC00','#FF851B','#FF4136']
+var rankColor = ['#FBB735','#E98931','#EB403B','#B32E37','#6C2A6A','#5C4399','#1F5EA8','#227FB0','#2AB0C5','#39C0B3']
+d3.tsv("../data/movies.tsv", function(error, data) {
+	if(error) throw error;
+
+	data.forEach(function(d) {
+		var ranks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		var score = 0;
+		for(var i=0; i<177; i++) {
+			rank = d['c'+d3.format('03')(i+1)];
+			if(rank > 0) {
+				score += 11 - rank;
+				ranks[rank-1] += 1;
+			}
+		}
+		d.score = score;
+		d.ranks = ranks;
+		try      {
+			d.poster = metadata[d['#imdbid']].Poster;
+			d.metadata = metadata[d['#imdbid']];
+		}
+		catch(e) { d.poster = 'http://www.ifn-modern.com/skin/frontend/fortis/default/images/no-image.png'; }
+	});
+
+
+	var li = ol.selectAll('div.list')
+		.data(data
+			.sort(function(a, b) { return b.score - a.score; })
+			.filter(function(d) { return d.score > 20; })
+		)
+		.enter().append('div').attr('class', 'list')
+		.text(function(d,i){return i+1;});
+
+	li.append('img')
+		.attr('class', 'poster')
+		.style("width", "30px")
+		.attr('src', function(d) { return d.poster; });
+
+	li.append('div')
+		.attr('class', 'title')
+		.text(function(d) { return d.title; });
+
+	li.append('div')
+		.attr('class', 'year')
+		.text(function(d) { return d.year; });
+
+	li.append('div')
+		.attr('class', 'director')
+		.text(function(d) { return d.director; });
+
+	li.append('div')
+		.attr('class', 'score')
+		.text(function(d) { return d.score; });
+
+	li.append('div')
+		.attr('class', 'barcontainer');
+
+	li.select('div.barcontainer').selectAll('.bar')
+		.data(function(d) { return d.ranks; })
+		.enter().append('div')
+			.attr('class', 'bar')
+			.style('background-color',function(d,i){return rankColor[i]})
+			.style('width', function(d) { return x(d) + 'px'; })
+			.text(function(d) { if(d!=0)return d; });
+
+	li.append('h5')
+			.attr('class','metaheader')
+			.text("Additional details +");
+
+	li.append('div')
+		.attr('class','metadata')
+
+	var metadiv = li.selectAll('div.metadata');
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Country: '+ (d.metadata.Country)} )
+
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Genre: '+ d.metadata.Genre} )
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Language: '+ d.metadata.Language} )
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'IMDB rating: '+ d.metadata.imdbRating} )
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Rated: '+ d.metadata.Rated} )
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Actors: '+ d.metadata.Actors} )
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Awards: '+ d.metadata.Awards} )
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Runtime: '+ d.metadata.Runtime} )
+
+	metadiv.append('span').text(
+		function(d){
+			if(typeof d.metadata == 'undefined'){return;}
+			return 'Plot: '+ d.metadata.Plot} )
+
+});
+
+function sortYear(order){
+	li = ol.selectAll('div.list')
+	.sort(function(a,b){if(order ==1){
+			return d3.ascending(a.year,b.year);
+		}else{
+			return d3.descending(a.year,b.year);
+		}
+		})
+};
+
+function sortDirector(order){
+	li = ol.selectAll('div.list')
+	.sort(function(a,b){if(order ==1){
+			return d3.ascending(a.director,b.director);
+		}else{
+			return d3.descending(a.director,b.director);
+		}
+		})
+};
+
+function sortScore(order){
+	li = ol.selectAll('div.list')
+	.sort(function(a,b){if(order ==1){
+			return d3.ascending(a.score,b.score);
+		}else{
+			return d3.descending(a.score,b.score);
+		}
+		})
+};
+
+function sortTitle(order){
+	li = ol.selectAll('div.list')
+	.sort(function(a,b){if(order ==1){
+			return d3.ascending(a.title,b.title);
+		}else{
+			return d3.descending(a.title,b.title);
+		}
+		})
+};
+
+function sortRank(order,ranks){
+	showRank([0,1,2,3,4,5,6,7,8,9]);
+	hideRanksExcept(ranks);
+	li = ol.selectAll('div.list')
+	.sort(function(a,b){
+		ascore = 0;
+		bscore = 0;
+		ranks.forEach(function(d){
+			ascore += a.ranks[d];
+			bscore += b.ranks[d];
+		})
+		if(order == 1){
+			return d3.ascending(ascore,bscore);
+		}else{
+			return d3.descending(ascore,bscore);
+		}
+	});
+
+};
+
+function sortSelectedRanks(order){
+	var el = document.getElementsByTagName('select')[0];
+	var ranks = getSelectValues(el);
+
+	if(ranks.length ==0){
+		showRank([0,1,2,3,4,5,6,7,8,9]);
+		alert("Please select ranks!");
+		return;
+	}
+	console.log(ranks);
+  sortRank(order, ranks);
+}
+
+function getSelectValues(select) {
+  var result = [];
+  var options = select && select.options;
+  var opt;
+
+  for (var i=0, iLen=options.length; i<iLen; i++) {
+    opt = options[i];
+
+    if (opt.selected) {
+      result.push(parseInt(opt.value));
+    }
+  }
+  return result;
+}
+
+function hideRanksExcept(r){
+	console.log("Trying to hide"+r.toString());
+	ol.selectAll('div.list')
+	.selectAll('.bar')
+	.filter(function(d,i)
+		{
+			if(r.indexOf(i)==-1)return 1;
+		})
+	.style("display","none")
+};
+function showRank(r){
+	ol.selectAll('div.list')
+	.selectAll('.bar')
+	.filter(function(d,i)
+		{
+			if(r.indexOf(i)!=-1)return 1;
+		})
+	.style("display","inline-block")
+};
+
+		</script>
+	</body>
+</html>
+
+<style type="text/css" >
+	body { margin: 30px 50px; font-family: sans-serif; }
+	div.list:nth-of-type(2n+1) {background-color: aliceblue}
+
+
+	#header{font-size: 24px;width: 1000px;border-bottom: 0.5px solid #696969; margin-bottom: 10px; padding-bottom: 5px}
+	div.hname{margin-left: 100px; display: inline-block;}
+	div.hyear{margin-left: 100px; display: inline-block;}
+	div.hscore{margin-left: 15px; display: inline-block;}
+	div.hdirector{margin-left: 15px; display: inline-block;}
+	div.hvotes{margin-left: 50px; display: inline-block;}
+	.rankselect{
+		font-size: 10px;
+	}
+	.arrow-up {
+	  width: 0;
+	  height: 0;
+	  border-left: 5px solid transparent;
+	  border-right: 5px solid transparent;
+	  border-bottom: 5px solid green;
+		display: inline-block;
+	}
+
+	.arrow-down {
+	  width: 0;
+	  height: 0;
+	  border-left: 5px solid transparent;
+	  border-right: 5px solid transparent;
+	  border-top: 5px solid red;
+		display: inline-block;
+	}
+
+
+	#top {width: 1000px; }
+	div.list { margin-bottom: 10px; padding-left: 10px}
+	img.poster { width: 30px; margin: 0px 25px; }
+	div.bar { height: 15px; margin-right: 1px; float:left; margin-top:34px; color: white;font-size: 14px;text-align: center;}
+	div.title { margin: 20px; width: 200px; display: inline-block; }
+	div.year{margin: 10px; display: inline-block;}
+	div.director{margin-left: 40px; width: 100px; display: inline-block;}
+	div.score{margin: 40px; display: inline-block;margin-right: 60px; }
+	div.barcontainer{ margin-left:20px; display: inline-block; width:280px}
+	div.metadata{display: none;}
+	div.metadata span{display:block;}
+
+</style>

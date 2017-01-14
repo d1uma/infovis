@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style type="text/css" media="screen, print">
+			body { margin: 30px 50px; font-family: sans-serif; }
+		</style>
+		<title>Top 100</title>
+	</head>
+	<body>
+		<h1>Top 100</h1>
+
+		<script src="http://d3js.org/d3.v3.min.js"></script>
+		<script>
+
+var metadata = {};
+d3.tsv("http://127.0.0.1:8080/2016bbc/data/metadata.tsv", function(error, data) {
+	if(error) throw error;
+	data.forEach(function(d) {
+		metadata[d.imdbID] = d;
+	});
+});
+
+var body = d3.select("body");
+
+d3.tsv("http://127.0.0.1:8080/2016bbc/data/movies.tsv", function(error, data) {
+	if(error) throw error;
+
+	data.forEach(function(d) {
+		var score = 0;
+		for(var i=0; i<177; i++) {
+			rank = d['c'+d3.format('03')(i+1)];
+			if(rank > 0) {
+				score += 11 - rank;
+			}
+		}
+		d.score = score;
+		try      { d.poster = metadata[d['#imdbid']].Poster; }
+		catch(e) { d.poster = 'N/A'; }
+	});
+
+	body.selectAll('.movie')
+		.data(data
+			.filter(function(d) { return d.score > 20; })
+		)
+		.enter().append('img')
+			.attr('width', function(d) { return d.score; })
+			.attr('class', 'poster')
+			.attr('src', function(d) { return d.poster; });
+
+});
+
+		</script>
+	</body>
+</html>

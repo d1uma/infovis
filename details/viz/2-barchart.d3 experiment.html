@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<style type="text/css" >
+			body { margin: 30px 50px; font-family: sans-serif; }
+			li { margin-bottom: 10px; }
+			img.poster { width: 30px; margin: 0px 20px; }
+			div.bar { width: 10px; margin-right: 1px;  position:static;}
+			span.title { margin-left: 20px; }
+		</style>
+		<title>Top 100</title>
+	</head>
+	<body>
+		<h1>Top 100</h1>
+		<ol id='top'></ol>
+
+		<script src="../vendor/d3/d3.js"></script>
+		<script>
+
+var metadata = {};
+d3.tsv("../data/metadata.tsv", function(error, data) {
+	if(error) throw error;
+	data.forEach(function(d) {
+		metadata[d.imdbID] = d;
+	});
+});
+
+var ol = d3.select("body").selectAll("#top")
+var rankColor = ['#001f3f','#0074D9','#7FDBFF','#3D9970','#2ECC40','#01FF70','#FFDC00','#FF851B','#FF4136']
+
+d3.tsv("../data/movies.tsv", function(error, data) {
+	if(error) throw error;
+
+	data.forEach(function(d) {
+		var ranks = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+		var score = 0;
+		for(var i=0; i<177; i++) {
+			rank = d['c'+d3.format('03')(i+1)];
+			if(rank > 0) {
+				score += 11 - rank;
+				ranks[rank-1] += 1;
+			}
+		}
+		d.score = score;
+		d.ranks = ranks;
+		try      { d.poster = metadata[d['#imdbid']].Poster; }
+		catch(e) { d.poster = 'N/A'; }
+	});
+
+	var li = ol.selectAll('.movie')
+		.data(data
+			.sort(function(a, b) { return b.score - a.score; })
+			.filter(function(d) { return d.score > 20; })
+		)
+		.enter().append('li');
+
+	li.append('img')
+		.attr('class', 'poster')
+		.attr('src', function(d) { return d.poster; });
+
+	li.selectAll('.var')
+		.data(function(d) { return d.ranks; })
+		.enter().append('div')
+			.attr('class', 'bar')
+			//.attr('src', 'N000000-0.png')
+			.style('background-color',function(d,i){return rankColor[i]})
+			.style('height', function(d) { return 3*d+1 + 'px'; });
+
+	li.append('span')
+		.attr('class', 'title')
+		.text(function(d) { return d.title; });
+
+});
+
+		</script>
+	</body>
+</html>
