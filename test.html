@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>D3 Test</title>
+		<script type="text/javascript" src="d3.js"></script>
+	</head>
+	<body>		
+	</body>
+</html>
+
+<style>
+body {
+  counter-reset: section;                    /* Set the section counter to 0 */
+}
+
+div.banner::after {
+  counter-increment: section;                /* Increment the section counter*/
+  content: "(" counter(section) ")"; /* Display the counter */
+}
+
+div.tooltip {	
+    position: absolute;			
+    text-align: left;			
+    width: 100px;					
+    height: 90px;					
+    padding: 2px;				
+    font: 12px sans-serif;		
+    background: lightsteelblue;	
+    border: 0px;		
+    border-radius: 8px;			
+    pointer-events: none;			
+}
+
+div.banner {
+	padding: 10px;
+	display:inline-block;
+	width: 110px;
+}
+
+div.number {
+	float:top;
+	text-align : center;
+	font: 24px;
+}
+</style>
+		
+		<script type="text/javascript">
+		var div = d3.select("body").append("div")	
+    .attr("class", "tooltip")				
+    .style("opacity", 0);
+    
+var metadata = {};
+var movies = {};
+       
+d3.tsv("metadata.tsv", function(error, data) {
+	if(error) throw error;
+	data.forEach(function(d) {
+		metadata[d.imdbID] = d;
+		metadata[d.Genre]=d;
+	});
+});
+
+var body = d3.select("body");
+
+d3.tsv("movies.tsv", function(error, data) {
+	if(error) throw error;
+	movies = data;
+	getScore();
+	movies.sort(function(a,b){return b.score - a.score});
+	movies = movies.splice(0,100);
+	plot(movies);
+});
+
+function plot(data){
+	//console.log(data[0].title);
+		body.selectAll('.movie')
+		.data(data)
+		.enter()
+		.append('div')
+		.attr("class", "banner")
+		//.append('div')
+		//.attr("class", "number")
+		.append('img')
+			.attr('width', 100)
+			.attr('class', 'poster')
+			.attr('src', function(d) { return d.poster; })
+			.on("mouseover", function (d) {
+                div.transition()	
+                .duration(200)		
+                .style("opacity", .9)
+                .style("left", (d3.event.pageX) + "px")		
+                .style("top", (d3.event.pageY - 28) + "px");
+                div.html(d.title+"<br/>"+ "Director: "+d.director+"<br/>"+"Year: "+d.year+"<br/>"+d.genre)})
+			.on("mouseout", function(d) {		
+            	div.transition()		
+                .duration(500)		
+                .style("opacity", 0);	
+        		});
+			};
+
+function getScore(){
+	movies.forEach(function(d) {
+		var score = 0;
+		for(var i=0; i<177; i++) {
+			rank = d['c'+d3.format('03')(i+1)];
+			if(rank > 0) {
+				score += 11 - rank;
+			}
+		}
+		d.score = score;
+		try      { 
+		d.poster = metadata[d['#imdbid']].Poster
+		d.genre=metadata[d['#imdbid']].Genre
+		}
+		catch(e) { 
+		d.poster = 'N/A'
+		d.title='no title'; }
+	});
+}
+
+function sortMovies(){
+body.selectAll('.movie')
+	.sort(function(a,b){return a.score - b.score})
+}
+//plot(movies);
+</script>
+
+
